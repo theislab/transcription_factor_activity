@@ -1,8 +1,8 @@
-from typing import Union
-import tempfile
+import math
 import os
 import shutil
-import math
+import tempfile
+from typing import Union
 
 
 def call_peaks(
@@ -19,19 +19,17 @@ def call_peaks(
     mem_gb: int = 4.0,
     kwargs: dict = None,
 ):
-    """Run relaxed peak calling on pseudo bulk files.
+    """Run relaxed peak calling on pseudo bulk fragment files.
 
     Parameters
     ----------
         fragpaths : Union[str, list]
-        Path to fragment files. If multiple paths are given, they are collapsed to a single space-separated string.
+            Path to fragment files. If multiple paths are given, they are collapsed to a single space-separated string.
 
     Returns
     -------
     None
     """
-    # ENCODE: -B --SPMR --keep-dup all --call-summits
-
     # find macs2
     macs2_path = macs2_path or shutil.which("macs2")
 
@@ -61,31 +59,27 @@ def call_peaks(
             args += f"-{key} {value} "
     cmd = f"{macs2_path} callpeak -t {fragpaths} -f {format} -g {effective_genome_size} -p {pval_thresh} {broadstr} {nomod_str} -n {outdir} {args}"
 
-    print(cmd)
-    # run cmd
+    # run peak calling
     os.system(cmd)
 
     if not broad:
         # temporary files
         npeak_tmp = f"{tempfile.gettempdir()}/{os.path.basename(outdir)}.tmp"
 
-        cmd = 'LC_COLLATE=C sort -k 8gr,8gr {sort_param} "{prefix}_peaks.narrowPeak" | '
-        'awk \'BEGIN{{OFS="\\t"}}'
-        '{{$4="Peak_"NR; if ($2<0) $2=0; if ($3<0) $3=0; if ($10==-1) '
-        "$10=$2+int(($3-$2+1)/2.0); print $0}}' > {npeak_tmp}".format(
-            sort_param=get_gnu_sort_param(mem_gb * 1024**3, ratio=0.5),
-            prefix=outdir,
-            npeak_tmp=npeak_tmp,
+        cmd = "".join(
+            [
+                f'LC_COLLATE=C sort -k 8gr,8gr {get_gnu_sort_param(mem_gb * 1024 ** 3, ratio=0.5)} "{outdir}_peaks.narrowPeak" | ',
+                'awk \'BEGIN{OFS="\\t"}',
+                '{$4="Peak_"NR; if ($2<0) $2=0; if ($3<0) $3=0; if ($10==-1) ',
+                f"$10=$2+int(($3-$2+1)/2.0); print $0}}' > {npeak_tmp}",
+            ]
         )
         os.system(cmd)
 
         cmd = f"head -n {cap_num_peak} {npeak_tmp} > {outdir}_peaks.narrowPeak"
-
         os.system(cmd)
 
         os.remove(npeak_tmp)
-        # clip peaks between 0-chromSize.
-        # bed_clip(npeak_tmp2, chrsz, npeak)
 
     return
 
@@ -115,4 +109,4 @@ def get_gnu_sort_param(max_mem_job, ratio=0.5):
             Ratio to define the buffer size according to `max_mem_job`.
     """
     mem_mb = int(math.ceil(max_mem_job * ratio / (1024 * 1024)))
-    return "-S {mem_mb}M".format(mem_mb=mem_mb)
+    return f"-S {mem_mb}M"
