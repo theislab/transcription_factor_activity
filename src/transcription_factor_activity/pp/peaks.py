@@ -20,11 +20,15 @@ def call_peaks(
 
     Parameters
     ----------
+        fragpaths : Union[str, list]
+        Path to fragment files. If multiple paths are given, they are collapsed to a single space-separated string.
 
     Returns
     -------
+    None
     """
     # ENCODE: -B --SPMR --keep-dup all --call-summits
+
     # find macs2
     macs2_path = macs2_path or shutil.which("macs2")
 
@@ -38,13 +42,23 @@ def call_peaks(
     # if list of paths given, collapse to a single space-separated string
     fragpaths = " ".join(fragpaths)
 
+    # compute shift
+    if shift is None:
+        shift = -int(round(float(extsize) / 2.0))
+
     broadstr = "--broad" if broad else ""
-    nomod_str = f"--nomodel --extsize {extsize} --shift {shift}" if format is "BED" else ""
+    nomod_str = f"--nomodel --extsize {extsize} --shift {shift}" if format == "BED" else ""
 
-    kwargs = str(**kwargs) or ""
-    cmd = f"{macs2_path} callpeak -t {fragpaths} -f {format} -g {effective_genome_size} -p {pval_thresh}\
-          {broadstr} {nomod_str} -n {outdir}/macs2 {kwargs}"
+    args = ""
+    for key, value in kwargs.items():
+        if isinstance(value, bool):
+            if value:
+                args += f"-{key} "
+        else:
+            args += f"-{key} {value} "
+    cmd = f"{macs2_path} callpeak -t {fragpaths} -f {format} -g {effective_genome_size} -p {pval_thresh} {broadstr} {nomod_str} -n {outdir} {args}"
 
+    print(cmd)
     # run cmd
     os.system(cmd)
     return
