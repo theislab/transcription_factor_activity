@@ -25,7 +25,28 @@ def call_peaks(
     ----------
         fragpaths : Union[str, list]
             Path to fragment files. If multiple paths are given, they are collapsed to a single space-separated string.
-
+        macs2_path : str, optional
+            Path to macs2 executable. If None, macs2 is searched in PATH.
+        outdir : str, optional
+            Output directory. Defaults to temporary directory.
+        broad : bool, optional
+            If True, run broad peak calling. Defaults to False.
+        format : str, optional
+            Format of fragment files. Defaults to "BED".
+        effective_genome_size : int, optional
+            Sum all of chromosome lengths. Defaults to 2.7e9.
+        pval_thresh : float, optional
+            P-value threshold. Defaults to 0.01.
+        extsize : int, optional
+            Smoothing window size.
+        shift : float, optional
+            Shift size. If None, shift is set to -extsize/2.
+        cap_num_peak : int, optional
+            Cap number of detected peaks. Defaults to 300000.
+        mem_gb : int, optional
+            Maximum memory in GB. Defaults to 4.0.
+        kwargs : dict, optional
+            Additional arguments to pass to macs2.
     Returns
     -------
     None
@@ -54,9 +75,9 @@ def call_peaks(
     for key, value in kwargs.items():
         if isinstance(value, bool):
             if value:
-                args += f"-{key} "
+                args += f"--{key} "
         else:
-            args += f"-{key} {value} "
+            args += f"--{key}={value} "
     cmd = f"{macs2_path} callpeak -t {fragpaths} -f {format} -g {effective_genome_size} -p {pval_thresh} {broadstr} {nomod_str} -n {outdir} {args}"
 
     # run peak calling
@@ -84,6 +105,7 @@ def call_peaks(
     return
 
 
+# code from https://github.com/ENCODE-DCC/atac-seq-pipeline/blob/master/src/encode_lib_common.py#L283
 def get_gnu_sort_param(max_mem_job, ratio=0.5):
     """Get a string of parameters for GNU sort according to maximum memory of a job/instance.
 
