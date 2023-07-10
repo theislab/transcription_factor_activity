@@ -1,1 +1,1 @@
-from .basic import basic_preproc
+from .peaks import call_peaks
