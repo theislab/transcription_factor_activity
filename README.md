@@ -33,7 +33,7 @@ pip install transcription_factor_activity
 1. Install the latest development version:
 
 ```bash
-pip install git+https://github.com/lauradmartens/transcription_factor_activity.git@main
+pip install git+https://github.com/theislab/transcription_factor_activity.git@main
 ```
 
 ## Release notes
